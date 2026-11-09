@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kintail to Atholl</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: field-notebook — header, scrollable day strip, then a two-column day sheet (map | plan), then trip-wide reference */
+:root{
+  --bg:#EDF1EC; --surface:#F8FAF6; --ink:#1C2725; --muted:#596A64; --line:#CBD5CD;
+  --heather:#7A4A8A; --loch:#2B6779; --moss:#4F6834; --faded:#B5C1B8; --water:#BCD5DC; --soft:#E3E9E2;
+  --display:"Young Serif", Georgia, "Times New Roman", serif;
+  --body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111816; --surface:#18211E; --ink:#E2EAE5; --muted:#97A9A2; --line:#2C3934;
+  --heather:#C291D3; --loch:#6CB0C3; --moss:#9EB97A; --faded:#3B4A44; --water:#1F3B44; --soft:#1E2925; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111816; --surface:#18211E; --ink:#E2EAE5; --muted:#97A9A2; --line:#2C3934;
+  --heather:#C291D3; --loch:#6CB0C3; --moss:#9EB97A; --faded:#3B4A44; --water:#1F3B44; --soft:#1E2925; color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px;display:flex;flex-direction:column;gap:28px}
+a{color:var(--loch);text-underline-offset:2px}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--heather);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0;line-height:1.15}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+header.top{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between}
+header.top h1{font-size:clamp(36px,6vw,60px)}
+header.top p{margin:8px 0 0;max-width:60ch;color:var(--muted)}
+.count{font-family:var(--mono);text-align:right;display:flex;flex-direction:column;gap:4px}
+.count b{font-size:32px;font-weight:500;color:var(--heather);font-variant-numeric:tabular-nums}
+
+.strip{overflow-x:auto;margin-inline:-4px;padding:4px}
+.strip ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(9,minmax(104px,1fr));gap:6px;min-width:960px}
+.strip button{width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:10px 10px 9px;cursor:pointer;display:flex;flex-direction:column;gap:4px;font:inherit}
+.strip button:hover{border-color:var(--muted)}
+.strip button[aria-selected="true"]{border-color:var(--ink);box-shadow:inset 0 -3px 0 var(--k)}
+.strip .d{font:500 11px/1 var(--mono);color:var(--muted);letter-spacing:.04em}
+.strip .t{font-size:14px;font-weight:600;line-height:1.2}
+.kind{--k:var(--muted)}
+.kind.hike{--k:var(--moss)} .kind.travel{--k:var(--loch)} .kind.games{--k:var(--heather)} .kind.rest{--k:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:6px;font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--k)}
+.tag::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--k)}
+
+.sheet{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:860px){.sheet{grid-template-columns:1fr}}
+.mapcard{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;position:sticky;top:16px}
+@media (max-width:860px){.mapcard{position:static}}
+.mapcard svg{width:100%;height:auto;max-height:620px;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font:12px/1.3 var(--mono);color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:22px;height:0;border-top:3px solid var(--heather)}
+.legend i.f{border-color:var(--faded)} .legend i.t{border-top-style:dashed;border-color:var(--loch)}
+.caveat{font-size:13px;color:var(--muted);margin:0}
+
+.plan{display:flex;flex-direction:column;gap:22px;min-width:0}
+.plan h2{font-size:clamp(28px,4vw,38px)}
+.plan .lede{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:0}
+.stats div{background:var(--surface);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stats dt{font:500 11px/1.2 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.stats dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+h3{font-size:20px}
+.sec{display:flex;flex-direction:column;gap:10px}
+.timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.timeline li{display:grid;grid-template-columns:76px 1fr;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
+.timeline li:first-child{border-top:0}
+.timeline time{font:500 13px/1.5 var(--mono);color:var(--muted)}
+.timeline b{display:block}
+.timeline span{color:var(--muted);font-size:15px}
+ul.notes{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.links a{border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:14px;text-decoration:none;background:var(--surface)}
+.links a:hover{border-color:var(--loch)}
+.fact{background:var(--soft);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.fact p{margin:0}
+.pager{display:flex;justify-content:space-between;gap:12px}
+.pager button{font:inherit;font-weight:600;background:none;border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:8px 14px;cursor:pointer}
+.pager button:disabled{opacity:.35;cursor:default}
+
+.ref{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px;border-top:1px solid var(--line);padding-top:28px}
+.ref section{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ref h2{font-size:26px}
+.check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.check label{display:flex;gap:10px;align-items:flex-start;padding:5px 0;cursor:pointer}
+.check input{margin-top:5px;accent-color:var(--heather)}
+.check input:checked+span{color:var(--muted);text-decoration:line-through}
+.progress{font:500 13px var(--mono);color:var(--muted)}
+.lk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.lk li{padding:8px 0;border-top:1px solid var(--line)}
+.lk li:first-child{border-top:0}
+.lk small{display:block;color:var(--muted);font-size:14px}
+.sos{border:1px solid var(--heather);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.sos p{margin:0}
+.big{font:500 28px/1 var(--mono);color:var(--heather)}
+footer{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.plan,.mapcard svg{animation:in .25s ease-out}}
+@keyframes in{from{opacity:.4}to{opacity:1}}
+</style>
+<style>body{margin:0}*{box-sizing:border-box}</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">23–31 May 2027 · Scottish Highlands · 2 walkers, 1 tent</div>
+      <h1>Kintail to Atholl</h1>
+      <p>Five walking days on the Affric Kintail Way from Loch Ness to the west coast, then south by bus and train to the Atholl Gathering at Blair Castle.</p>
+    </div>
+    <div class="count"><span class="eyebrow">Until we land</span><b id="count">–</b><span class="eyebrow">days</span></div>
+  </header>
+
+  <nav class="strip" aria-label="Trip days"><ol id="strip" role="tablist"></ol></nav>
+
+  <main class="sheet" id="sheet">
+    <div class="mapcard">
+      <div id="map"></div>
+      <div class="legend">
+        <span><i></i>Today on foot</span>
+        <span><i class="t"></i>Bus / train</span>
+        <span><i class="f"></i>Rest of trip</span>
+      </div>
+      <p class="caveat">Schematic map for orientation only. Navigate with the Harvey Affric Kintail Way map or OS Explorer 414/415.</p>
+    </div>
+    <article class="plan" id="plan" role="tabpanel" aria-live="polite"></article>
+  </main>
+
+  <div class="ref">
+    <section>
+      <h2>Before you go</h2>
+      <span class="progress" id="progress"></span>
+      <ul class="check" id="check"></ul>
+    </section>
+    <section>
+      <h2>Useful links</h2>
+      <ul class="lk" id="lk"></ul>
+    </section>
+    <section>
+      <h2>If something goes wrong</h2>
+      <div class="sos">
+        <span class="big">999 / 112</span>
+        <p>Ask for <b>Police</b>, then <b>Mountain Rescue</b>. Give your location, what happened and how many people are with you.</p>
+        <p>Mobile signal is patchy in Glen Affric. Register for UK emergency SMS before the trip: text <b>register</b> to 999 and follow the reply. It only works on a UK network, so it may not work on a Dutch SIM while roaming; check with your provider.</p>
+      </div>
+      <ul class="notes">
+        <li>Leave your route and expected finish time with someone at home.</li>
+        <li>Alltbeithe hostel and Camban bothy are the only shelter between Loch Affric and Morvich.</li>
+        <li>If a river is too high to cross safely, wait or turn back. Spate rivers drop fast once rain stops.</li>
+      </ul>
+    </section>
+  </div>
+  <footer>Distances are approximate. Bus and train times change; check Citylink and ScotRail a few weeks before.</footer>
+</div>
+
+<script>
+const gm = q => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+
+const P = {
+  inv:[57.478,-4.224], invAir:[57.542,-4.047], drum:[57.336,-4.481], cann:[57.346,-4.757], dog:[57.315,-4.850],
+  aff:[57.271,-5.004], allt:[57.236,-5.209], camb:[57.216,-5.262], morv:[57.227,-5.392], shiel:[57.208,-5.425],
+  donan:[57.274,-5.516], fa:[57.145,-4.680], avie:[57.195,-3.829], blair:[56.766,-3.846], pit:[56.703,-3.735],
+  perth:[56.392,-3.437], edi:[55.953,-3.188], ediAir:[55.950,-3.363], fw:[56.820,-5.105], stir:[56.117,-3.937]
+};
+const TRAIL = [P.drum,[57.335,-4.53],[57.340,-4.62],[57.343,-4.70],P.cann,[57.330,-4.80],P.dog,[57.298,-4.89],[57.284,-4.94],[57.274,-4.975],P.aff,[57.271,-5.04],[57.267,-5.08],[57.259,-5.12],[57.250,-5.16],P.allt,P.camb,[57.214,-5.30],[57.218,-5.34],[57.224,-5.37],P.morv];
+const BUS_IN = [P.inv,[57.43,-4.30],[57.38,-4.41],P.drum];
+const BUS_OUT = [P.shiel,[57.17,-5.25],[57.145,-5.10],[57.065,-4.79],P.fa,[57.26,-4.55],P.drum,[57.38,-4.41],[57.43,-4.30],P.inv];
+const TRAIN_N = [P.inv,P.avie,[56.935,-4.24],P.blair];
+const TRAIN_S = [P.blair,P.pit,P.perth,P.edi];
+
+const VIEWS = {
+  trail:{lat:[57.17,57.52], lon:[-5.58,-4.17], w:760, h:349, grid:{lat:.1,lon:.2},
+    lochs:[
+      {pts:[[57.44,-4.32],[57.38,-4.42],[57.33,-4.46],[57.26,-4.55],[57.19,-4.63],[57.15,-4.67]],name:"Loch Ness",at:[57.235,-4.62],a:"end"},
+      {pts:[[57.306,-4.875],[57.297,-4.915],[57.287,-4.955],[57.281,-4.985]],name:"Loch Beinn a' Mheadhoin",at:[57.322,-4.98],a:"middle"},
+      {pts:[[57.264,-5.02],[57.257,-5.06],[57.250,-5.10],[57.243,-5.135]],name:"Loch Affric",at:[57.232,-5.065],a:"middle"},
+      {pts:[[57.212,-5.41],[57.235,-5.46],[57.26,-5.50],[57.28,-5.545]],name:"Loch Duich",at:[57.198,-5.53],a:"start"}],
+    places:[
+      ["inv","Inverness","end",-9,4],["drum","Drumnadrochit","middle",0,20],["cann","Cannich","middle",0,-11],["dog","Dog Falls","middle",0,20],
+      ["aff","Affric car park","middle",0,20],["allt","Alltbeithe","middle",0,-11],["camb","Camban bothy","middle",0,20],
+      ["morv","Morvich","middle",0,-11],["shiel","Shiel Bridge","end",-6,16],["donan","Eilean Donan","start",-6,-10]],
+    words:[]},
+  region:{lat:[55.85,57.72], lon:[-5.62,-2.95], w:520, h:660, grid:{lat:.5,lon:.5},
+    lochs:[{pts:[[57.44,-4.32],[57.38,-4.42],[57.33,-4.46],[57.26,-4.55],[57.19,-4.63],[57.15,-4.67]],name:"Loch Ness",at:[57.215,-4.52],a:"start"}],
+    places:[
+      ["inv","Inverness","start",9,4],["invAir","Airport","start",8,-4],["drum","Drumnadrochit","end",-8,-4],["fa","Fort Augustus","end",-8,4],
+      ["shiel","Shiel Bridge","start",-4,18],["avie","Aviemore","start",9,4],["blair","Blair Atholl","end",-9,4],["pit","Pitlochry","start",9,8],
+      ["perth","Perth","start",9,4],["edi","Edinburgh","start",9,4],["ediAir","Airport","end",-9,4],["fw","Fort William","start",9,4],["stir","Stirling","end",-9,4]],
+    words:[["Cairngorms",[57.06,-3.55]],["Glen Affric",[57.33,-5.12]],["Highland Perthshire",[56.58,-3.98]]]}
+};
+
+const DAYS = [
+ {date:"Sun 23 May",kind:"travel",short:"Arrive Inverness",title:"Arrive in Inverness",
+  lede:"Fly in, stock up, and sleep somewhere with a shower. Everything you can't carry on a plane gets bought today.",
+  stats:[["On foot","Town only"],["Sleep","Campsite or hostel"],["Shops","Everything"],["Daylight","~05:00–22:00"]],
+  steps:[["Afternoon","Land at Inverness Airport","Bus into the city centre takes about 25 minutes."],["Afternoon","Outdoor shop","Stove gas (not allowed on flights), Harvey map if not bought yet, midge net."],["Evening","Supermarket","Food for 4–5 days on the trail. Cannich has a small shop for top-ups."],["Evening","Check the forecast","Read the MWIS Northwest Highlands forecast for the week."]],
+  notes:["Pack food by day into separate bags. It makes the remote stretch easier to manage.","Weigh your packs. Aim for under about 15 kg each including food and water."],
+  links:[["Inverness",gm("Inverness city centre")],["MWIS forecast","https://www.mwis.org.uk/"],["Harvey Maps","https://www.harveymaps.co.uk/"],["Hostelling Scotland","https://www.hostellingscotland.org.uk/"]],
+  fact:"Inverness is the most northerly city in the United Kingdom. It was only granted city status in 2000.",
+  view:"region",hi:[],trans:[],ring:["inv","invAir"]},
+ {date:"Mon 24 May",kind:"hike",short:"Drumnadrochit → Cannich",title:"Drumnadrochit to Cannich",
+  lede:"A short bus ride along Loch Ness, then the first day on foot. Easy forest and farm tracks that let your legs and packs settle in.",
+  stats:[["Distance","~21 km"],["Terrain","Forest & farm tracks"],["Water","Fill up in Cannich"],["Sleep","Wild camp past Cannich"]],
+  steps:[["08:30","Bus Inverness → Drumnadrochit","About 30 minutes along the A82. The trail starts at the tourist information centre."],["09:30","Climb through Craigmonie woods","The steepest bit of the day comes first."],["Midday","Forestry tracks to Shenval","Long, steady, not very scenic. Good for finding your pace."],["Afternoon","Cannich","Top up water and snacks at the village shop."],["Evening","Camp","Pitches along the forestry track west of Cannich towards Dog Falls."]],
+  notes:["This is the least scenic day. If you'd rather have an extra rest day later, you can take the bus straight to Cannich and skip it.","Check feet for hot spots at every break. Day 1 blisters ruin day 3."],
+  links:[["Stage 1 on Walkhighlands","https://www.walkhighlands.co.uk/lochness/drumnadrochit-cannich.shtml"],["Official route","https://affrickintailway.com/affric-kintail-way-route-overview.html"],["Drumnadrochit",gm("Drumnadrochit tourist information")],["Cannich",gm("Cannich Highland")]],
+  fact:"Loch Ness holds more fresh water than all the lakes in England and Wales combined. It is deep, cold and peaty enough that visibility below a few metres is close to zero.",
+  view:"trail",hi:[0,4],trans:[BUS_IN],ring:[]},
+ {date:"Tue 25 May",kind:"hike",short:"Cannich → Affric car park",title:"Cannich to the head of the glen road",
+  lede:"The day the walk turns beautiful. You enter Glen Affric past Dog Falls and follow a loch shore through old Caledonian pinewood.",
+  stats:[["Distance","~18–20 km"],["Terrain","Tracks & paths"],["Water","Streams (filter)"],["Sleep","Wild camp near car park"]],
+  steps:[["Morning","Forestry track to Dog Falls","Picnic tables and toilets here, the last ones for days."],["Midday","Along Loch Beinn a' Mheadhoin","Pinewoods, birch and views up the glen."],["Afternoon","River Affric car park","End of the public road. From here on it's walkers only."],["Evening","Camp","Pitches along the track and around the junction further into the glen."]],
+  notes:["Look for crested tits and red squirrels in the pinewoods.","Filter or boil all stream water. Deer graze everywhere upstream."],
+  links:[["Dog Falls",gm("Dog Falls Glen Affric")],["River Affric car park",gm("River Affric car park")],["Trees for Life","https://treesforlife.org.uk/"],["Outdoor Access Code","https://www.outdooraccess-scotland.scot/"]],
+  fact:"Glen Affric holds one of the largest surviving remnants of the ancient Caledonian pinewood that once covered much of the Highlands. Some of its Scots pines are several hundred years old.",
+  view:"trail",hi:[4,10],trans:[],ring:[]},
+ {date:"Wed 26 May",kind:"hike",short:"Car park → Alltbeithe",title:"Along Loch Affric to Alltbeithe",
+  lede:"A shorter day deep into the wild. No road, no shop and no easy way out from here, so take your time and enjoy it.",
+  stats:[["Distance","~14 km"],["Terrain","Track, some wet path"],["Water","Streams (filter)"],["Sleep","Camp by the hostel"]],
+  steps:[["Morning","Track along Loch Affric","Big open views west to the hills of Kintail."],["Afternoon","Alltbeithe","Glen Affric youth hostel. Book well ahead if you'd like a bed instead of the tent."],["Evening","Camp","Spots by the river just past the hostel."]],
+  notes:["From here to Morvich there are no refreshment stops and no way to shorten the route.","If the forecast for Friday looks bad, think now about using tomorrow to sit it out."],
+  links:[["Alltbeithe",gm("Glen Affric Youth Hostel Alltbeithe")],["Glen Affric hostel","https://www.hostellingscotland.org.uk/"],["MWIS forecast","https://www.mwis.org.uk/"]],
+  fact:"Alltbeithe has no road access at all. It is often called the most remote youth hostel in Scotland, and supplies come in by track.",
+  view:"trail",hi:[10,15],trans:[],ring:[]},
+ {date:"Thu 27 May",kind:"rest",short:"Spare day",title:"Spare day in the glen",
+  lede:"Your buffer. Use it for weather, sore feet or simply sitting by the river. If everything is going well, you can walk out a day early instead.",
+  stats:[["Distance","0–5 km"],["Option","Move to Camban"],["Water","Streams (filter)"],["Sleep","Tent or bothy"]],
+  steps:[["Any time","Rest by Alltbeithe","Read, nap, watch the deer on the hillside."],["Optional","Walk to Camban bothy","About 2 km. A basic stone shelter run by the Mountain Bothies Association."],["Alternative","Walk out to Morvich","Then take an extra day in Blair Atholl or Pitlochry."]],
+  notes:["Experienced walkers climb Sgùrr nan Ceathreamhnan from here. It's a serious mountain day, so skip it unless the cloud is high and you're confident navigating.","Bothies are free and can't be booked. Bring your own stove, mat and sleeping bag, and carry all rubbish out."],
+  links:[["Camban bothy",gm("Camban bothy Glen Affric")],["Mountain Bothies Association","https://www.mountainbothies.org.uk/"],["Bothy code","https://www.mountainbothies.org.uk/bothies/bothy-code/"]],
+  fact:"The Mountain Bothies Association looks after around 100 shelters across Britain. Volunteers carry in tools, wood and building materials on foot to keep them standing.",
+  view:"trail",hi:[15,16],trans:[],ring:[]},
+ {date:"Fri 28 May",kind:"hike",short:"Alltbeithe → Morvich",title:"Over the watershed to Kintail",
+  lede:"The most dramatic stretch. You cross from waters that run east to the North Sea into ones that run west to the Atlantic, then drop through Gleann Lichd to the sea loch.",
+  stats:[["Distance","~13 km"],["Terrain","Rough, boggy path"],["Water","Streams (filter)"],["Sleep","Morvich campsite"]],
+  steps:[["Morning","Past Camban to the watershed","The path climbs gently to the pass between Glen Affric and Gleann Lichd."],["Midday","Down Gleann Lichd","Steep slopes on both sides and the Five Sisters ridge to the south."],["Afternoon","Morvich","Countryside centre and campsite. Showers at last."]],
+  notes:["The official route goes via Gleann Lichd. A northern alternative over the Bealach an Sgàirne is said to be prettier but climbs more.","Gaiters help. The path can be wet and faint in places."],
+  links:[["Morvich",gm("Morvich Kintail")],["Gleann Lichd",gm("Glen Licht House Kintail")],["Five Sisters of Kintail",gm("Five Sisters of Kintail")]],
+  fact:"The Battle of Glen Shiel was fought just south of here in 1719. A small Jacobite force backed by Spanish troops was defeated by government soldiers.",
+  view:"trail",hi:[15,20],trans:[],ring:["morv"]},
+ {date:"Sat 29 May",kind:"travel",short:"Kintail → Blair Atholl",title:"Coast to castle by bus and train",
+  lede:"A long, easy travel day across the Highlands. Sit back and watch the country you just walked roll past the window.",
+  stats:[["On foot","~2 km to bus"],["Bus","~2 h to Inverness"],["Train","~1.5 h to Blair Atholl"],["Sleep","Blair Atholl campsite"]],
+  steps:[["Morning","Walk to Shiel Bridge","Catch the Citylink bus on the Skye–Inverness route."],["Midday","Inverness","Coffee, real lunch, resupply anything you need for Sunday."],["Afternoon","Train to Blair Atholl","Highland Main Line through the Drumochter Pass."],["Evening","Pitch at Blair Atholl","Campsite next to the castle. Book ahead for games weekend."]],
+  notes:["Check bus times on Citylink before you leave Morvich. Services are not frequent.","If you finished a day early, you could add a visit to Eilean Donan Castle near Dornie."],
+  links:[["Citylink buses","https://www.citylink.co.uk/"],["ScotRail","https://www.scotrail.co.uk/"],["Shiel Bridge",gm("Shiel Bridge bus stop")],["Blair Atholl campsite",gm("Blair Castle Caravan Park")],["Eilean Donan",gm("Eilean Donan Castle")]],
+  fact:"The train crosses Drumochter Summit at 452 metres, the highest point on the entire UK railway network.",
+  view:"region",hi:[],trans:[BUS_OUT,TRAIN_N],ring:["blair"]},
+ {date:"Sun 30 May",kind:"games",short:"Atholl Gathering",title:"The Atholl Gathering",
+  lede:"A full day of Highland games in the grounds of Blair Castle: heavy events, piping, dancing and the parade of the Atholl Highlanders.",
+  stats:[["Event","Atholl Gathering"],["Venue","Blair Castle"],["Walk","~10 min from camp"],["Sleep","Blair Atholl campsite"]],
+  steps:[["Morning","Arrive early","Find a spot near the arena rail before it fills."],["All day","Heavy events","Caber, stone put and hammer throw."],["All day","Piping and dancing","Solo piping and Highland dancing competitions run alongside."],["Afternoon","Blair Castle","Your ticket may include the castle and gardens. Check when booking."]],
+  notes:["Bring cash for food stalls, plus sun cream and a waterproof. May in Perthshire can do both.","Tickets and the programme go up on the Atholl Estates site in spring."],
+  links:[["Atholl Estates","https://atholl-estates.co.uk/"],["Blair Castle",gm("Blair Castle Blair Atholl")],["VisitScotland games list","https://www.visitscotland.com/things-to-do/events/highland-games"]],
+  fact:"The Atholl Highlanders are the Duke of Atholl's ceremonial regiment and are often described as Europe's only legal private army. In a caber toss, the judges score how straight the caber lands, not how far it goes.",
+  view:"region",hi:[],trans:[],ring:["blair"]},
+ {date:"Mon 31 May",kind:"travel",short:"Edinburgh & home",title:"Train to Edinburgh, fly home",
+  lede:"Down through Highland Perthshire to the capital. It's the late May bank holiday in the UK, so reserve train seats.",
+  stats:[["Train","~2 h to Edinburgh"],["Tram","~35 min to airport"],["Day","UK bank holiday"],["Sleep","Home"]],
+  steps:[["Morning","Pack up at Blair Atholl","Dry the tent if you can before it goes in a bag."],["Late morning","Train to Edinburgh","Via Pitlochry and Perth into Waverley station."],["Afternoon","Tram to the airport","Leave plenty of time on a holiday Monday."]],
+  notes:["Empty gas canisters can't fly either. Leave any spare at the campsite for the next walkers.","Muddy boots: give them a scrub. Airport security can ask about soil."],
+  links:[["ScotRail","https://www.scotrail.co.uk/"],["Edinburgh Trams","https://edinburghtrams.com/"],["Edinburgh Waverley",gm("Edinburgh Waverley station")]],
+  fact:"Edinburgh Waverley takes its name from Sir Walter Scott's novel Waverley, which makes it one of very few railway stations named after a book.",
+  view:"region",hi:[],trans:[TRAIN_S],ring:["edi","ediAir"]}
+];
+
+const CHECK = ["Book flights: into Inverness, out of Edinburgh","Book Morvich campsite (Fri 28)","Book Blair Atholl campsite (Sat 29 & Sun 30)","Atholl Gathering tickets","Reserve train seats for Mon 31 May","Harvey Affric Kintail Way map","3-season tent that handles wind","Sleeping bags rated to ~0 °C","Full waterproof jacket and trousers","Broken-in waterproof boots + gaiters","Water filter or tablets","Midge head nets + repellent","Stove (buy gas in Inverness)","First-aid kit incl. blister plasters","Power bank + offline map on phone","Travel insurance covering hiking"];
+
+const LINKS = [["Affric Kintail Way","https://affrickintailway.com/","Official route site, stages and services"],["Walkhighlands","https://www.walkhighlands.co.uk/lochness/drumnadrochit-cannich.shtml","Stage descriptions and trip reports"],["MWIS","https://www.mwis.org.uk/","Mountain weather forecasts by region"],["Scottish Outdoor Access Code","https://www.outdooraccess-scotland.scot/","Wild camping rules and good practice"],["Smidge midge forecast","https://www.smidgeup.com/midge-forecast/","How bad the midges will be, by area"],["Citylink","https://www.citylink.co.uk/","Buses along Loch Ness and from Shiel Bridge"],["ScotRail","https://www.scotrail.co.uk/","Inverness–Blair Atholl–Edinburgh trains"],["Atholl Estates","https://atholl-estates.co.uk/","Atholl Gathering tickets and programme"]];
+
+/* ---------- map ---------- */
+const NS="http://www.w3.org/2000/svg";
+function proj(v,[la,lo]){return [(lo-v.lon[0])/(v.lon[1]-v.lon[0])*v.w,(v.lat[1]-la)/(v.lat[1]-v.lat[0])*v.h]}
+function path(v,pts){return pts.map((p,i)=>(i?"L":"M")+proj(v,p).map(n=>n.toFixed(1)).join(" ")).join("")}
+function el(n,a,t){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(t)e.textContent=t;return e}
+function dms(x){const d=Math.floor(Math.abs(x)),m=Math.round((Math.abs(x)-d)*60);return d+"°"+String(m).padStart(2,"0")+"′"}
+
+function drawMap(day){
+  const v=VIEWS[day.view], s=el("svg",{viewBox:`0 0 ${v.w} ${v.h}`,role:"img","aria-label":"Schematic map for "+day.title});
+  s.appendChild(el("rect",{x:0,y:0,width:v.w,height:v.h,fill:"var(--surface)"}));
+  const g=el("g",{stroke:"var(--line)","stroke-width":1});
+  for(let la=Math.ceil(v.lat[0]/v.grid.lat)*v.grid.lat;la<v.lat[1];la+=v.grid.lat){const y=proj(v,[la,0])[1];g.appendChild(el("line",{x1:0,x2:v.w,y1:y,y2:y}));s.appendChild(el("text",{x:v.w-4,y:y-4,"text-anchor":"end",fill:"var(--muted)","font-size":10,"font-family":"IBM Plex Mono, monospace"},dms(la)+"N"))}
+  for(let lo=Math.ceil(v.lon[0]/v.grid.lon)*v.grid.lon;lo<v.lon[1];lo+=v.grid.lon){const x=proj(v,[0,lo])[0];g.appendChild(el("line",{x1:x,x2:x,y1:0,y2:v.h}));s.appendChild(el("text",{x:x+4,y:v.h-5,fill:"var(--muted)","font-size":10,"font-family":"IBM Plex Mono, monospace"},dms(lo)+"W"))}
+  s.insertBefore(g,s.children[1]);
+  const fz=day.view==="trail"?13:15;
+  v.lochs.forEach(l=>{s.appendChild(el("path",{d:path(v,l.pts),fill:"none",stroke:"var(--water)","stroke-width":day.view==="trail"?9:6,"stroke-linecap":"round","stroke-linejoin":"round"}));
+    const [x,y]=proj(v,l.at);s.appendChild(el("text",{x,y,"text-anchor":l.a,fill:"var(--loch)","font-size":fz-1,"font-style":"italic","font-family":"Young Serif, Georgia, serif"},l.name))});
+  v.words.forEach(([w,p])=>{const [x,y]=proj(v,p);s.appendChild(el("text",{x,y,"text-anchor":"middle",fill:"var(--muted)","font-size":fz,"letter-spacing":"2","font-family":"Source Sans 3, sans-serif"},w.toUpperCase()))});
+  s.appendChild(el("path",{d:path(v,TRAIL),fill:"none",stroke:"var(--faded)","stroke-width":3.5,"stroke-linecap":"round","stroke-linejoin":"round"}));
+  if(day.view==="region"){[BUS_OUT,TRAIN_N,TRAIN_S].forEach(r=>s.appendChild(el("path",{d:path(v,r),fill:"none",stroke:"var(--faded)","stroke-width":2,"stroke-dasharray":"5 5"})))}
+  day.trans.forEach(r=>s.appendChild(el("path",{d:path(v,r),fill:"none",stroke:"var(--loch)","stroke-width":3,"stroke-dasharray":"7 6","stroke-linecap":"round"})));
+  if(day.hi.length){s.appendChild(el("path",{d:path(v,TRAIL.slice(day.hi[0],day.hi[1]+1)),fill:"none",stroke:"var(--heather)","stroke-width":5.5,"stroke-linecap":"round","stroke-linejoin":"round"}))}
+  v.places.forEach(([k,name,a,dx,dy])=>{const [x,y]=proj(v,P[k]);const on=day.ring.includes(k);
+    if(on)s.appendChild(el("circle",{cx:x,cy:y,r:10,fill:"none",stroke:"var(--heather)","stroke-width":2.5}));
+    s.appendChild(el("circle",{cx:x,cy:y,r:4,fill:"var(--surface)",stroke:"var(--ink)","stroke-width":2}));
+    const t=el("text",{x:x+dx,y:y+dy,"text-anchor":a,fill:"var(--ink)","font-size":fz,"font-weight":on?700:600,"font-family":"Source Sans 3, sans-serif",stroke:"var(--surface)","stroke-width":3.5,"paint-order":"stroke"},name);s.appendChild(t)});
+  return s;
+}
+
+/* ---------- render ---------- */
+const strip=document.getElementById("strip"), plan=document.getElementById("plan"), map=document.getElementById("map");
+const KIND={hike:"On foot",travel:"Travel",games:"Highland games",rest:"Rest day"};
+DAYS.forEach((d,i)=>{const li=document.createElement("li");
+  li.innerHTML=`<button role="tab" id="tab-${i+1}" class="kind ${d.kind}" aria-selected="false" aria-controls="plan"><span class="d">DAY ${i+1} · ${d.date.toUpperCase()}</span><span class="t">${d.short}</span></button>`;
+  li.firstChild.onclick=()=>{location.hash="day-"+(i+1)};strip.appendChild(li)});
+
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function show(i){
+  const d=DAYS[i];
+  strip.querySelectorAll("button").forEach((b,j)=>{b.setAttribute("aria-selected",j===i);b.tabIndex=j===i?0:-1});
+  strip.querySelectorAll("button")[i].scrollIntoView({block:"nearest",inline:"nearest"});
+  map.replaceChildren(drawMap(d));
+  plan.setAttribute("aria-labelledby","tab-"+(i+1));
+  plan.innerHTML=`
+    <div><span class="tag kind ${d.kind}">Day ${i+1} · ${d.date} · ${KIND[d.kind]}</span>
+    <h2 style="margin-top:10px">${d.title}</h2><p class="lede">${d.lede}</p></div>
+    <dl class="stats">${d.stats.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+    <div class="sec"><h3>The day</h3><ol class="timeline">${d.steps.map(([t,b,s])=>`<li><time>${t}</time><div><b>${b}</b><span>${s}</span></div></li>`).join("")}</ol></div>
+    <div class="sec"><h3>Good to know</h3><ul class="notes">${d.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></div>
+    <div class="sec"><h3>Links</h3><div class="links">${d.links.map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${t} ↗</a>`).join("")}</div></div>
+    <div class="fact"><span class="eyebrow">Did you know</span><p>${d.fact}</p></div>
+    <div class="pager"><button id="prev" ${i===0?"disabled":""}>← Day ${i}</button><button id="next" ${i===DAYS.length-1?"disabled":""}>Day ${i+2} →</button></div>`;
+  plan.querySelector("#prev").onclick=()=>{location.hash="day-"+i};
+  plan.querySelector("#next").onclick=()=>{location.hash="day-"+(i+2)};
+}
+function route(){const m=/^#day-(\d)$/.exec(location.hash);const n=m?+m[1]:1;show(Math.min(Math.max(n,1),DAYS.length)-1)}
+window.addEventListener("hashchange",route);
+strip.addEventListener("keydown",e=>{const tabs=[...strip.querySelectorAll("button")],i=tabs.indexOf(document.activeElement);if(i<0)return;
+  let j=null;if(e.key==="ArrowRight")j=Math.min(i+1,tabs.length-1);if(e.key==="ArrowLeft")j=Math.max(i-1,0);
+  if(j!==null){e.preventDefault();location.hash="day-"+(j+1);setTimeout(()=>tabs[j].focus())}});
+route();
+
+/* countdown */
+const days=Math.ceil((new Date("2027-05-23T12:00:00+01:00")-Date.now())/864e5);
+document.getElementById("count").textContent=days>0?days:"0";
+
+/* checklist */
+let saved={};try{saved=JSON.parse(localStorage.getItem("k2a-check")||"{}")}catch(e){}
+const ck=document.getElementById("check"), prog=document.getElementById("progress");
+function upd(){const n=Object.values(saved).filter(Boolean).length;prog.textContent=`${n} of ${CHECK.length} done · saved in this browser`}
+CHECK.forEach((c,i)=>{const li=document.createElement("li");
+  li.innerHTML=`<label><input type="checkbox" id="ck-${i}" ${saved[i]?"checked":""}><span>${c}</span></label>`;
+  li.querySelector("input").onchange=e=>{saved[i]=e.target.checked;try{localStorage.setItem("k2a-check",JSON.stringify(saved))}catch(err){}upd()};
+  ck.appendChild(li)});upd();
+
+document.getElementById("lk").innerHTML=LINKS.map(([t,u,s])=>`<li><a href="${u}" target="_blank" rel="noopener">${t} ↗</a><small>${s}</small></li>`).join("");
+</script>
+</body>
+</html>
